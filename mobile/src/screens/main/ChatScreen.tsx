@@ -166,13 +166,18 @@ export const ChatScreen: React.FC = () => {
                          ext === 'png' ? 'image/png' :
                          ext === 'm4a' || ext === 'mp3' ? 'audio/mpeg' : 'application/octet-stream';
 
-      // Convert base64 to blob
-      const blob = await (await fetch(`data:${contentType};base64,${fileData}`)).blob();
+      // Convert base64 to ArrayBuffer for React Native
+      const byteCharacters = atob(fileData);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from(bucket)
-        .upload(fileName, blob, {
+        .upload(fileName, byteArray, {
           contentType,
           upsert: false,
         });
