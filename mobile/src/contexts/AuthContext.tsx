@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import api from '../lib/api';
+import { supabase } from '../lib/supabase';
 import { SignUpData } from '../screens/SignUpScreen';
 import { SignInData } from '../screens/SignInScreen';
 
@@ -38,7 +39,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkAuthStatus = async () => {
     try {
       const accessToken = await SecureStore.getItemAsync('accessToken');
-      if (accessToken) {
+      const refreshToken = await SecureStore.getItemAsync('refreshToken');
+
+      if (accessToken && refreshToken) {
+        // Restaurer la session Supabase
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (sessionError) {
+          console.error('Failed to restore Supabase session:', sessionError);
+        } else {
+          console.log('✅ Supabase session restored successfully');
+        }
+
         // Try to get current user from backend
         const response = await api.get('/auth/me');
         setUser(response.data);
@@ -72,17 +87,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await SecureStore.setItemAsync('refreshToken', refreshToken);
       await SecureStore.setItemAsync('user', JSON.stringify(userData));
 
+      // Initialiser la session Supabase
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (sessionError) {
+        console.error('Failed to set Supabase session:', sessionError);
+      } else {
+        console.log('✅ Supabase session initialized after signup');
+      }
+
       setUser(userData);
     } catch (error: any) {
       console.error('Sign up error:', error);
+
+      // Handle network errors
+      if (error.message === 'Network Error' || !error.response) {
+        throw new Error(
+          'Impossible de se connecter au serveur.\n\n' +
+          'Vérifiez que:\n' +
+          '1. Le backend est démarré (npm run start:dev dans /backend)\n' +
+          '2. L\'URL de l\'API dans mobile/.env est correcte\n' +
+          '   - Sur appareil physique: utilisez votre IP locale (ex: http://192.168.1.10:3000)\n' +
+          '   - Sur Android Emulator: utilisez http://10.0.2.2:3000\n' +
+          '   - Sur iOS Simulator: utilisez http://localhost:3000'
+        );
+      }
 
       // Extract error message
       const errorMessage = error.response?.data?.message || 'Sign up failed';
 
       if (errorMessage.includes('email')) {
-        throw new Error('Email already in use');
+        throw new Error('Email déjà utilisé');
       } else if (errorMessage.includes('phone')) {
-        throw new Error('Phone number already in use');
+        throw new Error('Numéro de téléphone déjà utilisé');
       } else {
         throw new Error(errorMessage);
       }
@@ -103,16 +143,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await SecureStore.setItemAsync('refreshToken', refreshToken);
       await SecureStore.setItemAsync('user', JSON.stringify(userData));
 
+      // Initialiser la session Supabase
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (sessionError) {
+        console.error('Failed to set Supabase session:', sessionError);
+      } else {
+        console.log('✅ Supabase session initialized after signin');
+      }
+
       setUser(userData);
     } catch (error: any) {
       console.error('Sign in error:', error);
 
+      // Handle network errors
+      if (error.message === 'Network Error' || !error.response) {
+        throw new Error(
+          'Impossible de se connecter au serveur.\n\n' +
+          'Vérifiez que:\n' +
+          '1. Le backend est démarré (npm run start:dev dans /backend)\n' +
+          '2. L\'URL de l\'API dans mobile/.env est correcte\n' +
+          '   - Sur appareil physique: utilisez votre IP locale (ex: http://192.168.1.10:3000)\n' +
+          '   - Sur Android Emulator: utilisez http://10.0.2.2:3000\n' +
+          '   - Sur iOS Simulator: utilisez http://localhost:3000'
+        );
+      }
+
       const errorMessage = error.response?.data?.message || 'Sign in failed';
 
       if (errorMessage.includes('credentials') || errorMessage.includes('password')) {
-        throw new Error('Invalid email/phone or password');
+        throw new Error('Email/téléphone ou mot de passe incorrect');
       } else if (errorMessage.includes('not found')) {
-        throw new Error('Account not found');
+        throw new Error('Compte introuvable');
       } else {
         throw new Error(errorMessage);
       }
@@ -125,6 +190,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (refreshToken) {
         await api.post('/auth/signout', { refreshToken });
       }
+
+      // Sign out from Supabase
+      await supabase.auth.signOut();
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {

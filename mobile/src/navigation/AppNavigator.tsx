@@ -6,8 +6,10 @@ import { SplashScreen } from '../screens/SplashScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { SignUpScreen } from '../screens/SignUpScreen';
 import { SignInScreen } from '../screens/SignInScreen';
+import { MainTabNavigator } from './MainTabNavigator';
+import { ContractorNavigator } from './ContractorNavigator';
 import { useAuth } from '../contexts/AuthContext';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
 export type AuthStackParamList = {
   Splash: undefined;
@@ -19,7 +21,7 @@ export type AuthStackParamList = {
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 export const AppNavigator: React.FC = () => {
-  const { isAuthenticated, loading: authLoading, signUp, signIn } = useAuth();
+  const { isAuthenticated, loading: authLoading, signUp, signIn, user } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [initializing, setInitializing] = useState(true);
 
@@ -52,25 +54,28 @@ export const AppNavigator: React.FC = () => {
     );
   }
 
-  // If user is authenticated, show main app (to be implemented)
+  // If user is authenticated, show main app
   if (isAuthenticated) {
+    // Check if user is a contractor/provider
+    const isContractor = user?.role === 'PROVIDER' || user?.role === 'CONTRACTOR';
+
     return (
-      <View style={styles.container}>
-        <Text style={styles.text}>Welcome to KmerServices!</Text>
-        <Text style={styles.subText}>(Main app screens to be implemented)</Text>
-      </View>
+      <NavigationContainer>
+        {isContractor ? <ContractorNavigator /> : <MainTabNavigator />}
+      </NavigationContainer>
     );
   }
 
   return (
     <NavigationContainer>
       <Stack.Navigator
+        initialRouteName={showOnboarding ? 'Splash' : 'SignUp'}
         screenOptions={{
           headerShown: false,
           animation: 'fade',
         }}
       >
-        {showOnboarding ? (
+        {showOnboarding && (
           <>
             <Stack.Screen name="Splash">
               {(props) => (
@@ -92,7 +97,7 @@ export const AppNavigator: React.FC = () => {
               )}
             </Stack.Screen>
           </>
-        ) : null}
+        )}
 
         <Stack.Screen name="SignUp">
           {(props) => (
@@ -142,22 +147,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-  },
-  text: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2D2D2D',
-    marginBottom: 12,
-  },
-  subText: {
-    fontSize: 16,
-    color: '#666',
   },
 });
