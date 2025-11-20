@@ -17,9 +17,22 @@ export function useNotifications() {
   const responseListener = useRef<any>();
 
   useEffect(() => {
-    // Configurer les canaux Android
+    // ⚠️ NOTIFICATIONS TEMPORAIREMENT DÉSACTIVÉES
+    // Les notifications push ne fonctionnent pas dans Expo Go (SDK 53+)
+    // Pour activer les notifications, vous devez faire un development build:
+    // 1. Créer un compte Expo: https://expo.dev/signup
+    // 2. Se connecter: eas login
+    // 3. Initialiser EAS: eas init
+    // 4. Faire un development build: eas build --profile development --platform android
+
+    console.log('⚠️ Push notifications désactivées en mode Expo Go');
+    console.log('ℹ️  Pour activer: créez un development build avec EAS');
+
+    // Configuration du canal Android (safe, ne cause pas d'erreur)
     notificationService.setupAndroidChannel();
 
+    // ❌ Désactivé temporairement pour éviter l'erreur "Invalid uuid"
+    /*
     // Obtenir et enregistrer le token si l'utilisateur est connecté
     if (user?.id) {
       registerPushToken();
@@ -50,6 +63,7 @@ export function useNotifications() {
         Notifications.removeNotificationSubscription(responseListener.current);
       }
     };
+    */
   }, [user?.id]);
 
   /**
