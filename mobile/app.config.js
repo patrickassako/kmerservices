@@ -12,11 +12,6 @@ module.exports = {
       backgroundColor: '#ffffff',
     },
     assetBundlePatterns: ['**/*'],
-    extra: {
-      eas: {
-        projectId: 'kmerservice-d178f',
-      },
-    },
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.kmerservices.app',
